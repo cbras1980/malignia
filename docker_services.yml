@@ -1,0 +1,15 @@
+---
+- name: Docker services
+  hosts: all
+  connection: local
+  gather_facts: false
+  tasks:
+    - include_vars: docker.yml
+    #- name: Tear down existing services
+    #  community.docker.docker_compose_v2:
+    #    project_src: /root/docker-tvheadend
+    #    state: absent
+    - name: Create and start services
+      community.docker.docker_compose_v2:
+        project_src: "/root/docker-{{ item }}"
+      loop: "{{ docker_sources }}"

@@ -1,0 +1,10 @@
+---
+- name: Add SSH public key
+  hosts: 127.0.0.1
+  connection: local
+  tasks:
+  - name: Add SSH key to bras user
+    ansible.posix.authorized_key:
+      user: bras
+      state: present
+      key: https://raw.githubusercontent.com/cbras1980/malignia/main/ssh_keys/id_ed25519.pub

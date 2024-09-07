@@ -1,0 +1,47 @@
+---
+- name: Configure IPtables rules
+  hosts: 127.0.0.1
+  gather_facts: true
+  tasks:
+  - include_vars: iptables.yml
+  - name: Create chain {{ trusted_allow_chain_name }}
+    ansible.builtin.iptables:
+      chain: "{{ trusted_chain_name }}"
+      chain_management: true
+
+  - name: Add {{ trusted_chain_name }} jump rule in FORWARD chain
+    ansible.builtin.iptables:
+      chain: FORWARD
+      protocol: tcp
+      action: insert
+      destination_ports: "{{ fwd_dest_ports }}"
+      jump: "{{ trusted_chain_name }}"
+
+  - name: Add ssh jump rule in INPUT chain
+    ansible.builtin.iptables:
+      chain: INPUT
+      protocol: tcp
+      destination_ports: "{{ input_dest_ports }}"
+      jump: "{{ trusted_chain_name }}"
+
+  - name: Add hosts to {{ trusted_chain_name }} chain
+    ansible.builtin.iptables:
+      chain: "{{ trusted_chain_name }}"
+      source: "{{ item }}"
+      jump: ACCEPT
+      comment: Accept new connections from trusted addresses
+      action: insert
+    loop: "{{ trusted_addrs }}"
+
+  - name: Add DROP to all other hosts
+    ansible.builtin.iptables:
+      chain: "{{ trusted_chain_name }}"
+      jump: DROP
+
+  - name: Allow Class A,B,C and VPN
+    ansible.builtin.iptables:
+      chain: INPUT
+      source: "{{ item }}"
+      jump: ACCEPT
+      action: insert
+    loop: ['127.0.0.0/8','10.0.0.0/8','172.16.0.0/12','192.168.0.0/16','10.69.69.0/24']

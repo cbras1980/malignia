@@ -1,0 +1,10 @@
+---
+docker_sources:
+  - monit
+  - tvheadend
+  - oscam
+  - download-box
+  - bitwarden
+  - apache-php
+  - nextcloud
+
