@@ -4,12 +4,24 @@
   connection: local
   gather_facts: false
   tasks:
-    - include_vars: docker.yml
+
+    - name: Get all docker container folders
+      find:
+        paths: ./docker_sources
+        patterns: "docker-*"
+        recurse: no
+        file_type: directory
+      register: docker_sources
     #- name: Tear down existing services
     #  community.docker.docker_compose_v2:
     #    project_src: /root/docker-tvheadend
     #    state: absent
+    #- name: debug
+    #  ansible.builtin.debug:
+    #    msg: "{{ item.path }}"
+    #  with_items: "{{ docker_sources.files }}"
+
     - name: Create and start services
       community.docker.docker_compose_v2:
-        project_src: "/root/docker-{{ item }}"
-      loop: "{{ docker_sources }}"
+        project_src: "{{ item.path }}"
+      with_items: "{{ docker_sources.files }}"

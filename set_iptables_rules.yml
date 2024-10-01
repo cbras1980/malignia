@@ -8,12 +8,14 @@
     ansible.builtin.iptables:
       chain: "{{ trusted_chain_name }}"
       chain_management: true
+      state: present
 
-  - name: Add {{ trusted_chain_name }} jump rule in FORWARD chain
+  - name: Add {{ trusted_chain_name }} jump rule in DOCKER-USER chain
     ansible.builtin.iptables:
-      chain: FORWARD
+      chain: DOCKER-USER
       protocol: tcp
       action: insert
+      in_interface: eno1
       destination_ports: "{{ fwd_dest_ports }}"
       jump: "{{ trusted_chain_name }}"
 
@@ -33,11 +35,6 @@
       action: insert
     loop: "{{ trusted_addrs }}"
 
-  - name: Add DROP to all other hosts
-    ansible.builtin.iptables:
-      chain: "{{ trusted_chain_name }}"
-      jump: DROP
-
   - name: Allow Class A,B,C and VPN
     ansible.builtin.iptables:
       chain: INPUT
@@ -45,3 +42,8 @@
       jump: ACCEPT
       action: insert
     loop: ['127.0.0.0/8','10.0.0.0/8','172.16.0.0/12','192.168.0.0/16','10.69.69.0/24']
+
+  - name: Add DROP to all other hosts
+    ansible.builtin.iptables:
+      chain: "{{ trusted_chain_name }}"
+      jump: DROP

@@ -1,0 +1,11 @@
+tv_chain_name: tv_allowed
+tv_allowed_as:
+  - AS12353
+  - AS6730
+  - AS13030
+  - AS3243
+  - AS2860
+tv_allowed_net:
+  - 178.196.0.0/15
+  - 172.224.0.0/12
+  - 104.16.0.0/12

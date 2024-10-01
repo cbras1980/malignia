@@ -1,0 +1,54 @@
+---
+- name: Configure IPtables rules
+  hosts: 127.0.0.1
+  gather_facts: true
+  tasks:
+
+  - include_vars: tvheadend.yml
+
+  - set_fact:
+      asnet: "{{ tv_allowed_as }}"
+
+  - name: Create chain {{ tv_chain_name }}
+    ansible.builtin.iptables:
+      chain: "{{ tv_chain_name }}"
+      flush: yes
+
+  - name: Add {{ trusted_chain_name }} jump rule in DOCKER-USER chain
+    ansible.builtin.iptables:
+      chain: DOCKER-USER
+      protocol: tcp
+      action: insert
+      in_interface: eno1
+      destination_ports:
+        - 9981
+        - 9982 
+      jump: "{{ tv_chain_name }}"
+
+  - name: Add allowed AS networs to rule
+    include_tasks: set_iptables_tv_allowed.yml
+    loop: "{{ asnet }}"
+    loop_control:
+      loop_var: asnet
+
+  - name: Add allowed nets to {{ tv_chain_name }} chain
+    ansible.builtin.iptables:
+      chain: "{{ tv_chain_name }}"
+      source: "{{ item }}"
+      jump: ACCEPT
+      comment: "Allow from {{ item }}"
+      action: insert
+    loop: "{{ tv_allowed_net }}"
+
+  - name: Add LOG to all other hosts
+    ansible.builtin.iptables:
+      chain: "{{ tv_chain_name }}"
+      log_prefix: "IPTABLES:TV: "
+      log_level: info
+
+  - name: Add DROP to all other hosts
+    ansible.builtin.iptables:
+      chain: "{{ tv_chain_name }}"
+      jump: DROP
+
+
