@@ -1,0 +1,41 @@
+---
+- name: Restrict password auth to the break-glass account only
+  hosts: 127.0.0.1
+  connection: local
+  become: true
+  vars_files:
+    - vars/breakglass.yml
+  tasks:
+    - name: Check whether sshd_config includes the drop-in directory
+      ansible.builtin.command: >
+        grep -Eq '^\s*Include\s+/etc/ssh/sshd_config\.d/\*\.conf' /etc/ssh/sshd_config
+      changed_when: false
+      failed_when: false
+      register: sshd_include_check
+
+    - name: Fail with instructions if sshd_config doesn't Include the drop-in dir
+      ansible.builtin.fail:
+        msg: >
+          /etc/ssh/sshd_config has no "Include /etc/ssh/sshd_config.d/*.conf"
+          line. Add one near the top of that file yourself after reviewing it
+          - this playbook deliberately won't edit your main sshd_config -
+          then re-run this playbook.
+      when: sshd_include_check.rc != 0
+
+    - name: Render break-glass sshd drop-in
+      ansible.builtin.template:
+        src: templates/sshd-breakglass.conf.j2
+        dest: "{{ breakglass_sshd_dropin }}"
+        mode: "0644"
+        backup: true
+      register: sshd_dropin
+
+    - name: Validate full sshd configuration before reloading
+      ansible.builtin.command: sshd -t
+      changed_when: false
+
+    - name: Reload sshd
+      ansible.builtin.systemd:
+        name: sshd
+        state: reloaded
+      when: sshd_dropin.changed

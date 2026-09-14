@@ -1,0 +1,28 @@
+---
+- name: Alert on break-glass login attempts (optional)
+  hosts: 127.0.0.1
+  connection: local
+  become: true
+  vars_files:
+    - vars/breakglass.yml
+  tasks:
+    - name: Skip - Telegram alerting not enabled
+      ansible.builtin.meta: end_play
+      when: not breakglass_notify_telegram
+
+    - name: Render login notification script
+      ansible.builtin.template:
+        src: templates/notify-breakglass-login.sh.j2
+        dest: "{{ breakglass_notify_script }}"
+        owner: root
+        group: root
+        mode: "0700"
+
+    - name: Hook the notification script into PAM for sshd logins
+      ansible.builtin.blockinfile:
+        path: /etc/pam.d/sshd
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - breakglass alert"
+        insertafter: EOF
+        block: |
+          session [success=1 default=ignore] pam_succeed_if.so user != {{ breakglass_user }}
+          session optional pam_exec.so seteuid {{ breakglass_notify_script }}

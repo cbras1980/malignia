@@ -1,0 +1,36 @@
+---
+- name: Grant break-glass sudo access
+  hosts: 127.0.0.1
+  connection: local
+  become: true
+  vars_files:
+    - vars/breakglass.yml
+  tasks:
+    - name: Install scoped recovery script
+      ansible.builtin.template:
+        src: templates/breakglass-recover.sh.j2
+        dest: "{{ breakglass_recover_script }}"
+        owner: root
+        group: root
+        mode: "0700"
+      when: breakglass_sudo_mode == 'scoped'
+
+    - name: Render sudoers drop-in (scoped to the recovery script only)
+      ansible.builtin.copy:
+        content: "{{ breakglass_user }} ALL=(root) NOPASSWD: {{ breakglass_recover_script }}\n"
+        dest: /etc/sudoers.d/breakglass
+        owner: root
+        group: root
+        mode: "0440"
+        validate: "visudo -cf %s"
+      when: breakglass_sudo_mode == 'scoped'
+
+    - name: Render sudoers drop-in (full - higher risk, see vars/breakglass.yml)
+      ansible.builtin.copy:
+        content: "{{ breakglass_user }} ALL=(ALL) NOPASSWD: ALL\n"
+        dest: /etc/sudoers.d/breakglass
+        owner: root
+        group: root
+        mode: "0440"
+        validate: "visudo -cf %s"
+      when: breakglass_sudo_mode == 'full'

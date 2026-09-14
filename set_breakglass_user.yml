@@ -1,0 +1,36 @@
+---
+- name: Create break-glass recovery account
+  hosts: 127.0.0.1
+  connection: local
+  become: true
+  vars_files:
+    - vars/breakglass.yml
+  tasks:
+    - name: Fail fast if no password hash was supplied
+      ansible.builtin.fail:
+        msg: >
+          Pass the account password hash with
+          -e breakglass_password_hash="$(openssl passwd -6 'your passphrase')"
+          - never store the plaintext or hash in this repo.
+      when: breakglass_password_hash is not defined
+
+    - name: Create break-glass group
+      ansible.builtin.group:
+        name: "{{ breakglass_group }}"
+        state: present
+
+    - name: Create break-glass user
+      ansible.builtin.user:
+        name: "{{ breakglass_user }}"
+        group: "{{ breakglass_group }}"
+        shell: "{{ breakglass_shell }}"
+        password: "{{ breakglass_password_hash }}"
+        update_password: always
+        create_home: true
+
+    - name: Lock down home directory
+      ansible.builtin.file:
+        path: "/home/{{ breakglass_user }}"
+        mode: "0700"
+        owner: "{{ breakglass_user }}"
+        group: "{{ breakglass_group }}"

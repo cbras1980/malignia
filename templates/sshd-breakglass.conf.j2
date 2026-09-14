@@ -1,0 +1,7 @@
+# Managed by set_breakglass_sshd.yml - do not edit by hand, edit vars/breakglass.yml instead.
+Match User {{ breakglass_user }}
+    PasswordAuthentication yes
+    PubkeyAuthentication no
+    AuthenticationMethods {{ 'password,keyboard-interactive:pam' if breakglass_require_totp else 'password' }}
+    MaxAuthTries 3
+    LoginGraceTime 20

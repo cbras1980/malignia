@@ -1,0 +1,10 @@
+---
+# Orchestrates the core break-glass setup. Read BREAKGLASS.md first.
+# nginx (set_breakglass_nginx.yml) is intentionally excluded here - run it
+# separately once you have a domain and TLS cert ready.
+- ansible.builtin.import_playbook: set_breakglass_user.yml
+- ansible.builtin.import_playbook: set_breakglass_sshd.yml
+- ansible.builtin.import_playbook: set_breakglass_pam_totp.yml
+- ansible.builtin.import_playbook: set_breakglass_sudoers.yml
+- ansible.builtin.import_playbook: set_breakglass_wetty.yml
+- ansible.builtin.import_playbook: set_breakglass_alert.yml

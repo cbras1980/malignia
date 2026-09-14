@@ -1,0 +1,21 @@
+[Unit]
+Description=Wetty browser terminal (break-glass access)
+After=network.target sshd.service
+
+[Service]
+# NOTE: verify these flags against `wetty --help` for the version that
+# actually gets installed - wetty's CLI options have changed across
+# releases and this hasn't been tested against a live server. Confirm
+# the process is actually listening on {{ wetty_bind_addr }}:{{ wetty_port }}
+# and connecting to {{ breakglass_user }}@127.0.0.1:{{ sshd_port }} before
+# relying on it.
+ExecStart=/usr/bin/wetty --host {{ wetty_bind_addr }} --port {{ wetty_port }} --sshhost 127.0.0.1 --sshport {{ sshd_port }} --sshuser {{ breakglass_user }} --forcessh
+Restart=on-failure
+User=wetty
+Group=wetty
+NoNewPrivileges=true
+ProtectSystem=strict
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

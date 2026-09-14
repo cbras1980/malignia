@@ -1,0 +1,22 @@
+server {
+    listen 443 ssl;
+    server_name {{ breakglass_domain }};
+
+    ssl_certificate     {{ breakglass_tls_cert }};
+    ssl_certificate_key {{ breakglass_tls_key }};
+
+    location / {
+        proxy_pass http://{{ wetty_bind_addr }}:{{ wetty_port }};
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+
+server {
+    listen 80;
+    server_name {{ breakglass_domain }};
+    return 301 https://$host$request_uri;
+}

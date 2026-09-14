@@ -1,0 +1,46 @@
+---
+- name: Install Wetty (browser-based terminal) bound to localhost
+  hosts: 127.0.0.1
+  connection: local
+  become: true
+  vars_files:
+    - vars/breakglass.yml
+  tasks:
+    - name: Install Node.js and npm
+      ansible.builtin.apt:
+        name:
+          - nodejs
+          - npm
+        state: present
+        update_cache: true
+
+    - name: Install wetty globally via npm
+      community.general.npm:
+        name: wetty
+        global: true
+        state: present
+
+    - name: Create dedicated system user for the wetty service
+      ansible.builtin.user:
+        name: wetty
+        system: true
+        shell: /usr/sbin/nologin
+        create_home: false
+
+    - name: Render wetty systemd unit
+      ansible.builtin.template:
+        src: templates/wetty.service.j2
+        dest: /etc/systemd/system/wetty.service
+        mode: "0644"
+      register: wetty_unit
+
+    - name: Reload systemd units
+      ansible.builtin.systemd:
+        daemon_reload: true
+      when: wetty_unit.changed
+
+    - name: Enable and start wetty
+      ansible.builtin.systemd:
+        name: wetty
+        enabled: true
+        state: "{{ 'restarted' if wetty_unit.changed else 'started' }}"
