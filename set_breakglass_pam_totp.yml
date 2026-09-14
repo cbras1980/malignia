@@ -1,0 +1,42 @@
+---
+- name: Add a TOTP second factor for the break-glass account (optional)
+  hosts: 127.0.0.1
+  connection: local
+  become: true
+  vars_files:
+    - vars/breakglass.yml
+  tasks:
+    - name: Skip - TOTP not requested
+      ansible.builtin.meta: end_play
+      when: not breakglass_require_totp
+
+    - name: Install google-authenticator PAM module
+      ansible.builtin.apt:
+        name: libpam-google-authenticator
+        state: present
+        update_cache: true
+
+    - name: Check if a TOTP secret already exists for the break-glass user
+      ansible.builtin.stat:
+        path: "/home/{{ breakglass_user }}/.google_authenticator"
+      register: totp_secret
+
+    - name: Fail with instructions if no TOTP secret exists yet
+      ansible.builtin.fail:
+        msg: >
+          No TOTP secret found for {{ breakglass_user }}. Log in as that user
+          locally (e.g. `sudo -u {{ breakglass_user }} google-authenticator`)
+          and follow the prompts, then PRINT the resulting secret/QR code and
+          store it somewhere physical and separate from your password safe -
+          that's the whole point of a break-glass factor. Re-run this
+          playbook once that file exists.
+      when: not totp_secret.stat.exists
+
+    - name: Require google-authenticator for the break-glass user only
+      ansible.builtin.blockinfile:
+        path: /etc/pam.d/sshd
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - breakglass TOTP"
+        insertbefore: "^@include common-auth"
+        block: |
+          auth [success=1 default=ignore] pam_succeed_if.so user != {{ breakglass_user }}
+          auth required pam_google_authenticator.so

@@ -1,0 +1,52 @@
+---
+# Non-secret configuration for the break-glass recovery account.
+# See BREAKGLASS.md before running any of the set_breakglass_*.yml playbooks.
+#
+# NEVER put the password hash, TOTP secret, or real authorized_keys content
+# in this file - it is committed to git. Pass those at runtime with -e, or
+# via an ansible-vault encrypted vars file you keep out of version control.
+
+breakglass_user: breakglass
+breakglass_group: breakglass
+breakglass_shell: /bin/bash
+
+# sshd
+breakglass_sshd_dropin: /etc/ssh/sshd_config.d/99-breakglass.conf
+sshd_port: 22
+
+# Sudo scope for the break-glass account:
+#   scoped - (default, recommended) can only run breakglass_recover_script
+#            as root, nothing else.
+#   full   - unrestricted NOPASSWD sudo. Higher blast radius if this
+#            account is ever compromised; only use if the scoped recovery
+#            script doesn't cover what you actually need in an emergency.
+breakglass_sudo_mode: scoped
+breakglass_recover_script: /usr/local/sbin/breakglass-recover.sh
+
+# The account the scoped recovery script's "restore-keys" action restores
+# access to, and the public key(s) it writes. Pass the real keys with
+# -e breakglass_recover_authorized_keys='["ssh-ed25519 AAAA... you@host"]'
+breakglass_recover_target_user: bras
+breakglass_recover_authorized_keys: []
+
+# TOTP second factor (recommended). Off by default because it needs a
+# secret stored somewhere other than your password safe - e.g. a printed
+# QR code kept in a physical safe - which is a deliberate step, not
+# something to turn on casually. See BREAKGLASS.md.
+breakglass_require_totp: false
+
+# Optional: send a Telegram alert every time the break-glass account logs
+# in over SSH, reusing the telegram-send setup already used by
+# myexperiments/elite_alert.py.
+breakglass_notify_telegram: false
+breakglass_notify_script: /usr/local/bin/notify-breakglass-login.sh
+
+# Wetty (browser-based terminal). Runs as its own unprivileged system user,
+# bound to localhost only - put a TLS-terminating reverse proxy in front of
+# it (see set_breakglass_nginx.yml, off by default).
+wetty_bind_addr: 127.0.0.1
+wetty_port: 3050
+
+# nginx reverse proxy for Wetty - only used if you run set_breakglass_nginx.yml
+# with -e breakglass_manage_nginx=true (see BREAKGLASS.md).
+breakglass_manage_nginx: false

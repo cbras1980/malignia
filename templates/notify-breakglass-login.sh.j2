@@ -1,0 +1,7 @@
+#!/bin/bash
+# Managed by set_breakglass_alert.yml - fires via PAM whenever the
+# break-glass account logs in over SSH. Requires telegram-send to already
+# be installed and configured (see myexperiments/elite_alert.py for the
+# same dependency: https://github.com/rahiel/telegram-send).
+set -euo pipefail
+echo "BREAK-GLASS LOGIN: user=${PAM_USER:-unknown} from=${PAM_RHOST:-unknown} at=$(date -Is)" | telegram-send --stdin

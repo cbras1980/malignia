@@ -1,0 +1,44 @@
+---
+- name: Configure nginx reverse proxy for break-glass Wetty (optional, off by default)
+  hosts: 127.0.0.1
+  connection: local
+  become: true
+  vars_files:
+    - vars/breakglass.yml
+  tasks:
+    - name: Skip - nginx management not enabled
+      ansible.builtin.meta: end_play
+      when: not breakglass_manage_nginx
+
+    - name: Fail if no TLS cert/key/domain was supplied
+      ansible.builtin.fail:
+        msg: >
+          Pass -e breakglass_tls_cert=... -e breakglass_tls_key=... -e
+          breakglass_domain=recover.yourdomain.tld pointing at an existing
+          certificate (e.g. issued by certbot) before enabling this. This
+          playbook assumes the Debian/Ubuntu sites-available/sites-enabled
+          nginx layout - adjust the paths below if yours differs.
+      when: breakglass_tls_cert is not defined or breakglass_tls_key is not defined or breakglass_domain is not defined
+
+    - name: Render nginx vhost for break-glass Wetty
+      ansible.builtin.template:
+        src: templates/nginx-breakglass.conf.j2
+        dest: /etc/nginx/sites-available/breakglass.conf
+        mode: "0644"
+      register: nginx_vhost
+
+    - name: Enable the vhost
+      ansible.builtin.file:
+        src: /etc/nginx/sites-available/breakglass.conf
+        dest: /etc/nginx/sites-enabled/breakglass.conf
+        state: link
+
+    - name: Validate nginx configuration
+      ansible.builtin.command: nginx -t
+      changed_when: false
+
+    - name: Reload nginx
+      ansible.builtin.systemd:
+        name: nginx
+        state: reloaded
+      when: nginx_vhost.changed

@@ -1,0 +1,33 @@
+#!/bin/bash
+# Managed by set_breakglass_sudoers.yml - do not edit by hand, edit
+# vars/breakglass.yml and templates/breakglass-recover.sh.j2 instead.
+# Minimal recovery actions available to the {{ breakglass_user }} account via sudo.
+set -euo pipefail
+
+target_user="{{ breakglass_recover_target_user }}"
+target_home=$(getent passwd "$target_user" | cut -d: -f6)
+
+case "${1:-}" in
+  restore-keys)
+    mkdir -p "$target_home/.ssh"
+    cat > "$target_home/.ssh/authorized_keys" <<'KEYS'
+{% for key in breakglass_recover_authorized_keys %}
+{{ key }}
+{% endfor %}
+KEYS
+    chown -R "$target_user":"$target_user" "$target_home/.ssh"
+    chmod 700 "$target_home/.ssh"
+    chmod 600 "$target_home/.ssh/authorized_keys"
+    echo "Restored authorized_keys for $target_user"
+    ;;
+  restart-sshd)
+    systemctl reload sshd
+    ;;
+  status)
+    systemctl --no-pager status sshd docker 2>&1 || true
+    ;;
+  *)
+    echo "Usage: $0 {restore-keys|restart-sshd|status}" >&2
+    exit 1
+    ;;
+esac
